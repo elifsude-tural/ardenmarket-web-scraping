@@ -7,7 +7,7 @@ import pandas as pd
 import csv
 
 
-urun_listesi = []
+
 
 # 1. Chrome Tarayıcı Ayarları
 options = webdriver.ChromeOptions()
@@ -53,4 +53,5 @@ try:
 
 finally:
     # İşlem bitince tarayıcıyı kapat
+
     driver.quit()
