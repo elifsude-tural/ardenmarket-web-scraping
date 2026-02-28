@@ -1,57 +1,61 @@
+import time
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
-import time
-import pandas as pd
-import csv
+from selenium.webdriver.support.ui import WebDriverWait, Select
+from selenium.webdriver.support import expected_conditions as EC
 
-
-
-
-# 1. Chrome Tarayıcı Ayarları
-options = webdriver.ChromeOptions()
-# options.add_argument("--headless") # Tarayıcı penceresini görmemek istersen bunu açabilirsin
-
-# 2. Sürücüyü otomatik kur ve başlat
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
 try:
-    # 3. Arden Market'e git
-    print("Siteye gidiliyor...")
-    driver.get("https://ardenmarket.com.tr/et-ve-tavuk.html")
+    # Direkt kategori sayfasına git
+    driver.get("https://ardenmarket.com.tr/")
+    time.sleep(4)
+    wait = WebDriverWait(driver, 20)
 
-    # Sayfanın yüklenmesi için 5 saniye bekle
-    time.sleep(5)
+    # Konum seç
+    konum_btn = wait.until(EC.element_to_be_clickable((By.ID, "delivery-button")))
+    konum_btn.click()
+    time.sleep(2)
+    Select(wait.until(EC.presence_of_element_located((By.ID, "delivery_state")))).select_by_value("İstanbul")
+    time.sleep(2)
+    ilce = Select(driver.find_element(By.ID, "delivery_city"))
+    for o in ilce.options:
+        if o.get_attribute("value") != "":
+            ilce.select_by_value(o.get_attribute("value"))
+            break
+    time.sleep(2)
+    mahalle = Select(driver.find_element(By.ID, "delivery_neighborhood"))
+    for o in mahalle.options:
+        if o.get_attribute("value") != "":
+            mahalle.select_by_value(o.get_attribute("value"))
+            break
+    time.sleep(2)
+    driver.find_element(By.CSS_SELECTOR, "#delivery-form button[type='submit']").click()
 
-    urunler = driver.find_elements(By.CLASS_NAME, "product-item")
+    # SAYFA YENİLEME YOK - form submit sonrası sayfanın kendisi güncellenecek
+    print("Form gönderildi, sayfa güncelleniyor...")
+    time.sleep(8)  # Daha uzun bekle
 
-    print(f"Toplam{len(urunler)} urun bulundu.\n")
+    # Şu anki URL'i göster
+    print("Mevcut URL:", driver.current_url)
 
+    # Ürün say
+    items = driver.find_elements(By.CSS_SELECTOR, "li.product-item")
+    print(f"Ürün sayısı: {len(items)}")
 
-    with open('arden_products.csv', mode='w', newline='', encoding='utf-8-sig') as csvfile:
-        yazici = csv.writer(csvfile)
-
-        yazici.writerow(['Product Name','Price'])
-
-        for urun in urunler:
-            try:
-                isim = urun.find_element(By.CSS_SELECTOR, "strong.product-item-name").text
-
-                fiyat = urun.find_element(By.CSS_SELECTOR, "span.price").text
-
-                yazici.writerow([isim, fiyat])
-
-                print(f"Urun: {isim} | Fiyat: {fiyat}")
-            except:
-                continue
-
-    #input("\nVerileri gorduysen Enter'a basarak tarayiciyi kapatabilirsin...")
-    print("Successfully made a csv file.")
-
-
+    # Hiç ürün yoksa tüm li'lerin class'larını listele
+    if len(items) == 0:
+        tum_li = driver.find_elements(By.TAG_NAME, "li")
+        classlar = set()
+        for li in tum_li:
+            c = li.get_attribute("class")
+            if c:
+                classlar.add(c)
+        print("Sayfadaki li class'ları:")
+        for c in classlar:
+            print(" -", c)
 
 finally:
-    # İşlem bitince tarayıcıyı kapat
-
     driver.quit()
